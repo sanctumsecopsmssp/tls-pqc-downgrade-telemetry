@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp "&#160;">
+]>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     category="info"
+     docName="draft-vicente-tls-pqc-downgrade-telemetry-00"
+     ipr="trust200902"
+     submissionType="independent"
+     xml:lang="en"
+     version="3">
+
+  <front>
+    <title abbrev="TLS PQC Downgrade Telemetry">Post-Quantum Downgrade Telemetry for TLS 1.3</title>
+
+    <seriesInfo name="Internet-Draft" value="draft-vicente-tls-pqc-downgrade-telemetry-00"/>
+
+    <author initials="B." surname="Vicente" fullname="Brian Vicente">
+      <organization>Sanctum SecOps LLC</organization>
+      <address>
+        <postal>
+          <city>Pine City</city>
+          <region>NY</region>
+          <country>United States of America</country>
+        </postal>
+        <email>bvicente@sanctumsecops.com</email>
+        <uri>https://orcid.org/0009-0006-6395-5308</uri>
+      </address>
+    </author>
+
+    <date year="2026" month="June" day="8"/>
+
+    <area>Security</area>
+    <workgroup>Transport Layer Security</workgroup>
+
+    <keyword>post-quantum cryptography</keyword>
+    <keyword>PQC</keyword>
+    <keyword>Sanctum SecOps</keyword>
+    <keyword>tls</keyword>
+
+    <abstract>
+      <t>This document defines a TLS 1.3 extension and a structured telemetry record that allow a TLS endpoint to advertise, measure, and export per-handshake post-quantum (PQC) negotiation outcomes. The extension carries values for offered PQC algorithms, the actually negotiated key-exchange suite, and a discrete downgrade-reason code. The associated telemetry record is expressed in CBOR with a CDDL schema, enabling enterprise operators to feed PQC-readiness controllers in a vendor-neutral manner.</t>
+      <t>The mechanism is intended to fill an observability gap that is not directly addressed by existing TLS 1.3 PQC continuity, downgrade-protection, or hybrid-key-exchange specifications. It provides only the measurement and export surface; concrete scoring weights, thresholds, and rotation triggers are intentionally out of scope and are not disclosed in this Internet-Draft.</t>
+    </abstract>
+
+    <note title="Source and Archival" removeInRFC="true">
+      <t>
+        Source for this draft is maintained at
+        <eref target="https://github.com/Sanc-Admin/tls-pqc-downgrade-telemetry">https://github.com/Sanc-Admin/tls-pqc-downgrade-telemetry</eref>.
+        A citable archival version of this document is published at Zenodo
+        upon each tagged release.
+        Author ORCID iD:
+        <eref target="https://orcid.org/0009-0006-6395-5308">https://orcid.org/0009-0006-6395-5308</eref>.
+        Author professional credentials:
+        <eref target="https://www.credly.com/users/brian-vicente">https://www.credly.com/users/brian-vicente</eref>.
+      </t>
+      <t>
+        Discussion of this document occurs on the IETF "tls" mailing list
+        (tls@ietf.org). Issues and pull requests may be filed at the GitHub
+        repository linked above.
+      </t>
+    </note>
+
+    <note title="IPR Considerations" removeInRFC="true">
+      <t>
+        The author has filed United States patent applications covering
+        subject matter relevant to this document, including
+        U.S. Provisional Patent Application No. 64/080,137
+        (filed 2026-06-01) and U.S. Patent Application No. 19/698,870
+        (filed 2026-06-05). By posting this Internet-Draft, the author
+        submits to the IETF Trust the rights described in Section 5 of
+        BCP 78 and BCP 79. Patent licensing terms are not yet known.
+        Implementers and reviewers should consult the IETF Datatracker
+        IPR disclosure page for this document for current disclosure
+        status. The Sanctum SecOps Private Enterprise Number (PEN) root
+        used for any OID allocations referenced in companion documents is
+        1.3.6.1.4.1.65953.
+      </t>
+      <t>
+        Patent-Pending Claim Scope: The scope of the pending patent
+        applications referenced above includes, but is not limited to,
+        the orchestration, observability, and tenant-isolation mechanisms
+        described in this document insofar as they intersect the claims
+        of the referenced applications. This Internet-Draft itself does
+        not grant any patent license. Specific implementation parameters
+        that would extend beyond the disclosed interface (including but
+        not limited to scoring weights, rotation triggers, tenant
+        carve-out parameters, and adequacy thresholds) are intentionally
+        out of scope and are not disclosed in this Internet-Draft.
+      </t>
+    </note>
+
+  </front>
+
+  <middle>
+    <section anchor="introduction">
+      <name>Introduction</name>
+      <t>Operators migrating production TLS 1.3 fleets to post-quantum (PQC) key exchange require a uniform, vendor-neutral way to observe negotiation outcomes across heterogeneous TLS stacks. Existing specifications focus on detection at the protocol layer; this document focuses on the export and aggregation surface that feeds operational dashboards, SIEM systems, and PQC-readiness controllers.</t>
+    </section>
+    <section anchor="terminology">
+      <name>Terminology</name>
+      <t>The key words "MUST", "MUST NOT", "SHOULD", "MAY" in this document are to be interpreted as described in BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all capitals, as shown here.</t>
+    </section>
+    <section anchor="tls-extension-pqc_downgrade_telemetry">
+      <name>TLS Extension: pqc_downgrade_telemetry</name>
+      <t>Endpoints MAY include the pqc_downgrade_telemetry extension in ClientHello and EncryptedExtensions. The extension body carries the offered PQC suite identifiers, the negotiated suite identifier, and a one-octet downgrade-reason code. Reason codes are partitioned into peer-incompatibility, policy-override, performance-fallback, and unknown.</t>
+    </section>
+    <section anchor="telemetry-record-schema-cddl">
+      <name>Telemetry Record Schema (CDDL)</name>
+      <t>The exported telemetry record is a CBOR map conformant to a CDDL schema defined in Section 5. Required keys include the handshake timestamp, peer identity hint, pqc_offered set, pqc_negotiated value, downgrade_reason code, and an rotation_epoch_id opaque string.</t>
+    </section>
+    <section anchor="operational-considerations">
+      <name>Operational Considerations</name>
+      <t>Operators SHOULD aggregate telemetry across observation windows and SHOULD avoid emitting per-handshake records on high-volume edges; sampled or bucketed export is recommended. This document does not specify scoring weights or alerting thresholds; those decisions are deployment-specific and are not disclosed in this Internet-Draft.</t>
+    </section>
+    <section anchor="security-considerations">
+      <name>Security Considerations</name>
+      <t>The telemetry surface intentionally exposes only negotiation metadata; it MUST NOT carry handshake secrets, transcript hashes, or private-key material. Operators SHOULD apply transport protection and access controls to telemetry endpoints commensurate with the sensitivity of peer-identity hints.</t>
+    </section>
+    <section anchor="iana-considerations">
+      <name>IANA Considerations</name>
+      <t>IANA is requested to register a new TLS ExtensionType value for pqc_downgrade_telemetry from the TLS ExtensionType Values registry, with reference to this document.</t>
+    </section>
+
+  </middle>
+
+  <back>
+    <references>
+      <name>Informative References</name>
+      <reference anchor="RFC2119" target="https://www.rfc-editor.org/info/rfc2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+          <author initials="S." surname="Bradner" fullname="S. Bradner"/>
+          <date year="1997" month="March"/>
+        </front>
+      </reference>
+      <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+        <front>
+          <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+          <author initials="B." surname="Leiba" fullname="B. Leiba"/>
+          <date year="2017" month="May"/>
+        </front>
+      </reference>
+    </references>
+  </back>
+</rfc>
